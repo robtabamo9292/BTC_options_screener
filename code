@@ -1,9 +1,10 @@
 import streamlit as st
 
+# Page config
 st.set_page_config(page_title="BTC Options Screener", layout="centered")
 st.title("📊 BTC Options Chain Sentiment Screener")
 
-# --- OI Explanation with Bullish/Bearish Interpretation and Trade Setup ---
+# --- OI Explanation Section ---
 with st.expander("ℹ️ How to Read Open Interest (OI) and Use It to Plan Trades"):
     st.markdown("""
     **What is Open Interest (OI)?**  
@@ -82,25 +83,30 @@ put_iv = st.number_input("Implied Volatility (Put %)", value=50.0)
 oi_above = st.number_input("Open Interest Above Spot", value=3200)
 oi_below = st.number_input("Open Interest Below Spot", value=1400)
 
-# --- Scoring Logic ---
+# --- Interpretation Logic ---
 def interpret_btc_options_chain(data):
     score = 0
+
     if data["put_call_ratio"] < 0.7:
         score += 1
     elif data["put_call_ratio"] > 1.0:
         score -= 1
+
     if data["skew_25d"] < 0:
         score += 1
     elif data["skew_25d"] > 0:
         score -= 1
+
     if data["spot_price"] > data["max_pain"]:
         score += 1
     else:
         score -= 1
+
     if data["call_iv"] > data["put_iv"]:
         score += 1
     else:
         score -= 1
+
     if data["oi_above_spot"] > data["oi_below_spot"]:
         score += 1
     else:
@@ -113,7 +119,7 @@ def interpret_btc_options_chain(data):
     else:
         return "⚖️ Neutral / Mixed"
 
-# --- Result ---
+# --- Run Interpretation ---
 data = {
     "put_call_ratio": put_call_ratio,
     "skew_25d": skew_25d,
@@ -127,5 +133,6 @@ data = {
 
 sentiment = interpret_btc_options_chain(data)
 
+# --- Display Result ---
 st.subheader("📊 Sentiment Result")
 st.success(sentiment)
