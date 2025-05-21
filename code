@@ -1,0 +1,131 @@
+import streamlit as st
+
+st.set_page_config(page_title="BTC Options Screener", layout="centered")
+st.title("📊 BTC Options Chain Sentiment Screener")
+
+# --- OI Explanation with Bullish/Bearish Interpretation and Trade Setup ---
+with st.expander("ℹ️ How to Read Open Interest (OI) and Use It to Plan Trades"):
+    st.markdown("""
+    **What is Open Interest (OI)?**  
+    Open Interest (OI) shows how many option contracts are still active at a specific strike price and expiration. It helps identify where market participants are placing their bets.
+
+    ### 🧭 How to Read OI by Strike Price:
+
+    - **High OI at Call Strikes Above Spot**  
+      → Traders expect price to rise. This is **bullish positioning**, especially if those strikes show rising volume.
+
+    - **High OI at Put Strikes Below Spot**  
+      → Traders are hedging or betting on downside. This is a **bearish signal**, particularly when supported by growing volume or IV.
+
+    - **OI Clusters Around a Strike**  
+      → Indicates a battleground. When spot is near that strike, expect possible volatility or price pinning, especially into expiry.
+
+    ### 📈 Bullish OI Example (with Numbers):
+    - **BTC Spot**: $65,000  
+    - **Call OI @ $70,000**: 3,200 contracts  
+    - **Put OI @ $60,000**: 1,400 contracts  
+    - **Put/Call Ratio**: 0.55  
+    - **25D Skew**: -3.5%  
+    - **Call IV**: 62%  
+    - **Put IV**: 49%  
+    ✅ Interpretation: Traders expect upside. Call OI dominates, IV rising on calls, and market is under-hedged.  
+    🔧 Strategy: Buy calls or bull call spreads, or sell puts.
+
+    ### 📉 Bearish OI Example (with Numbers):
+    - **BTC Spot**: $62,000  
+    - **Put OI @ $60,000**: 4,100 contracts  
+    - **Call OI @ $65,000**: 1,800 contracts  
+    - **Put/Call Ratio**: 1.25  
+    - **25D Skew**: +2.8%  
+    - **Put IV**: 68%  
+    - **Call IV**: 54%  
+    🚨 Interpretation: Traders are buying downside protection. Bearish skew and higher put IV confirms defensive positioning.  
+    🔧 Strategy: Long puts, put spreads, or short call spreads.
+
+    ### 🧠 Trade Guidance Summary:
+    - **Bullish**: Calls > Puts, Skew < 0, Call IV > Put IV → Long calls, bull spreads
+    - **Bearish**: Puts > Calls, Skew > 0, Put IV > Call IV → Long puts, put spreads
+    - **Neutral**: OI centered at ATM → Condors, straddles
+
+    👉 Combine OI with volatility, volume, and technical analysis for highest conviction.
+    """)
+
+# --- IV Explanation Section ---
+with st.expander("🔍 Understanding Implied Volatility (IV)"):
+    st.markdown("""
+    **What is Implied Volatility (IV)?**  
+    When reading an option chain, "IV" stands for **Implied Volatility**. It reflects the market’s expectation for how much the price of the underlying asset (e.g. BTC) will move over the option's life.
+
+    - **High IV** means traders expect **large price swings** (more uncertainty).
+    - **Low IV** implies **stable or range-bound markets**.
+
+    ### 🧠 How to Use IV:
+    - If **IV is high**, option premiums are expensive — better for **selling options** or using spreads.
+    - If **IV is low**, options are cheap — better for **buying calls or puts** outright.
+    - Track IV relative to historical levels (i.e. is IV elevated or suppressed compared to the past month or quarter?).
+
+    ### ⚡ Example:
+    - BTC at **$66,000**, 1-week IV is **70%**, 30-day IV average is **50%**.  
+    - Market expects volatility — e.g. FOMC, ETF news.  
+    📌 In this case: better to sell premium (e.g. iron condor) or use spreads to control cost.
+    """)
+
+# --- User Inputs ---
+st.subheader("🔢 Input Key Metrics")
+
+put_call_ratio = st.number_input("Put/Call Ratio", value=0.65)
+skew_25d = st.number_input("25D Skew (%)", value=-2.0)
+spot_price = st.number_input("Current BTC Spot Price", value=65000)
+max_pain = st.number_input("Max Pain Price", value=63000)
+call_iv = st.number_input("Implied Volatility (Call %)", value=55.0)
+put_iv = st.number_input("Implied Volatility (Put %)", value=50.0)
+oi_above = st.number_input("Open Interest Above Spot", value=3200)
+oi_below = st.number_input("Open Interest Below Spot", value=1400)
+
+# --- Scoring Logic ---
+def interpret_btc_options_chain(data):
+    score = 0
+    if data["put_call_ratio"] < 0.7:
+        score += 1
+    elif data["put_call_ratio"] > 1.0:
+        score -= 1
+    if data["skew_25d"] < 0:
+        score += 1
+    elif data["skew_25d"] > 0:
+        score -= 1
+    if data["spot_price"] > data["max_pain"]:
+        score += 1
+    else:
+        score -= 1
+    if data["call_iv"] > data["put_iv"]:
+        score += 1
+    else:
+        score -= 1
+    if data["oi_above_spot"] > data["oi_below_spot"]:
+        score += 1
+    else:
+        score -= 1
+
+    if score >= 3:
+        return "📈 Bullish"
+    elif score <= -2:
+        return "📉 Bearish"
+    else:
+        return "⚖️ Neutral / Mixed"
+
+# --- Result ---
+data = {
+    "put_call_ratio": put_call_ratio,
+    "skew_25d": skew_25d,
+    "spot_price": spot_price,
+    "max_pain": max_pain,
+    "call_iv": call_iv,
+    "put_iv": put_iv,
+    "oi_above_spot": oi_above,
+    "oi_below_spot": oi_below
+}
+
+sentiment = interpret_btc_options_chain(data)
+
+st.subheader("📊 Sentiment Result")
+st.success(sentiment)
